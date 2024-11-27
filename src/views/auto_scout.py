@@ -1,8 +1,8 @@
 import streamlit as st
 import asyncio
 import random
-from src.utils.auth_helper import require_auth
-from src.utils.database import (
+from ..utils.auth_helper import require_auth
+from ..utils.database import (
     get_db_connection,
     save_scout_history
 )
@@ -273,9 +273,6 @@ def show_auto_send_ui(candidates: list, message: dict):
                 st.session_state.sending = False
                 st.rerun()
             
-            if st.button("발송 종료", use_container_width=True):
-                st.session_state.sending = False
-                st.rerun()
 
 def show_manual_send_ui(candidates: list, message: dict):
     """수동 발송 UI"""

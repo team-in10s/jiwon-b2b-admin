@@ -3,6 +3,8 @@ from setuptools import setup, find_packages
 setup(
     name="jiwon-b2b-admin",
     packages=find_packages(),
+    package_data={'': ['*']},
+    include_package_data=True,
     install_requires=[
         "streamlit",
         "playwright",
@@ -15,7 +17,7 @@ setup(
         "numpy",
         "aiohttp",
         "asyncio",
-        "python-dateutil", 
+        "python-dateutil",
         "pytz",
         "requests",
         "urllib3",

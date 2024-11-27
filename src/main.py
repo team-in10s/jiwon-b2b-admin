@@ -1,4 +1,10 @@
 import streamlit as st
+import sys
+from pathlib import Path
+
+# Add the project root directory to Python path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
 
 # 페이지 설정을 가장 먼저 호출
 st.set_page_config(
@@ -7,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-from views import (
+from src.views import (
     show_auth_page,
     show_scraping_page,
     show_monitoring_page,

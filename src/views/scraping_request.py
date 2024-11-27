@@ -1,6 +1,6 @@
 import streamlit as st
-from src.utils.auth_helper import require_auth
-from src.services.webhook_service import WebhookService
+from ..utils.auth_helper import require_auth
+from ..services.webhook_service import WebhookService
 import time
 
 # WebhookService 인스턴스 생성 (URL 없이)
