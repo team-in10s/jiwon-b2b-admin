@@ -1,5 +1,5 @@
 import streamlit as st
-from src.config import ADMIN_PASSWORD
+from config import ADMIN_PASSWORD
 
 def check_password():
     """비밀번호를 확인하고 인증 상태를 세션에 저장"""

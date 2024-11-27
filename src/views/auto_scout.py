@@ -7,6 +7,7 @@ from src.utils.database import (
     save_scout_history
 )
 from psycopg2.extras import RealDictCursor
+import time
 
 class PlaywrightService:
     def __init__(self):
@@ -171,16 +172,110 @@ def show_auto_send_ui(candidates: list, message: dict):
     """자동 발송 UI"""
     if "sending" not in st.session_state:
         st.session_state.sending = False
+        st.session_state.progress = 0
+        st.session_state.success_count = 0
+        st.session_state.failed_candidates = []
     
     if not st.session_state.sending:
         if st.button("자동 발송 시작", use_container_width=True):
             st.session_state.sending = True
+            st.session_state.progress = 0
+            st.session_state.success_count = 0
+            st.session_state.failed_candidates = []
             st.rerun()
     
-    # 기존의 자동 발송 로직...
     if st.session_state.sending:
-        # (기존 코드 유지)
-        ...
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        # 진행 상황 업데이트 콜백
+        def update_progress(current, total):
+            progress = current / total
+            progress_bar.progress(progress)
+            status_text.text(f"진행 중... ({current}/{total})")
+            st.session_state.progress = progress
+        
+        # 에러 콜백
+        def on_error(error_message):
+            st.error(error_message)
+        
+        playwright_service = PlaywrightService()
+        playwright_service.progress_callback = update_progress
+        playwright_service.error_callback = on_error
+        
+        if st.session_state.progress == 0:  # 아직 시작하지 않은 경우
+            total = len(candidates)
+            success_count = 0
+            
+            for idx, candidate in enumerate(candidates, 1):
+                update_progress(idx, total)
+                
+                # 가상의 발송 로직
+                success = random.random() > 0.2  # 80% 성공률
+                
+                if success:
+                    try:
+                        with get_db_connection() as conn:
+                            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                                # mapping_id 조회
+                                cur.execute("""
+                                    SELECT id as mapping_id
+                                    FROM scraping_saramin_position_candidate
+                                    WHERE position_id = %s AND saramin_key = %s
+                                """, (st.session_state.selected_position_id, candidate['saramin_key']))
+                                
+                                result = cur.fetchone()
+                                if not result:
+                                    raise Exception("Mapping not found")
+                                
+                                mapping_id = result['mapping_id']
+                                
+                                # 상태 업데이트
+                                cur.execute("""
+                                    UPDATE scraping_saramin_position_candidate
+                                    SET scout_status = 'sent',
+                                        last_checked_at = NOW()
+                                    WHERE id = %s
+                                """, (mapping_id,))
+                                
+                                # scout_history에 기록 추가
+                                cur.execute("""
+                                    INSERT INTO scout_history 
+                                    (candidate_filter_id, message_id, status)
+                                    VALUES (%s, %s, 'sent')
+                                """, (mapping_id, message['id']))
+                                
+                                conn.commit()
+                        success_count += 1
+                    except Exception as e:
+                        on_error(f"DB 업데이트 실패: {str(e)}")
+                        st.session_state.failed_candidates.append(candidate)
+                else:
+                    st.session_state.failed_candidates.append(candidate)
+                
+                time.sleep(0.5)  # 가상의 딜레이
+            
+            st.session_state.success_count = success_count
+            st.session_state.progress = 1.0
+            progress_bar.progress(1.0)
+            
+            # 결과 표시
+            st.success(f"발송 완료! {success_count}/{total} 성공")
+            
+            if st.session_state.failed_candidates:
+                st.warning(f"{len(st.session_state.failed_candidates)}명의 후보자에게 발송 실패")
+                if st.button("실패한 후보자 재시도", use_container_width=True):
+                    st.session_state.progress = 0
+                    st.rerun()
+            
+            if st.button("응답 관리로 이동", use_container_width=True):
+                st.session_state.current_page = "응답 관리"
+                st.session_state.sending = False
+                st.rerun()
+            
+            if st.button("발송 종료", use_container_width=True):
+                st.session_state.sending = False
+                st.rerun()
 
 def show_manual_send_ui(candidates: list, message: dict):
     """수동 발송 UI"""
